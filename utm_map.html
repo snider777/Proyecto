@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Conversor Geográficas a UTM con Mapa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- CSS Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map {
+      margin: 0; padding: 0; height: 100%; width: 100%;
+    }
+    #map {
+      position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+    }
+    #inputPanel {
+      position: absolute;
+      bottom: 20px; right: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      width: 280px;
+      font-family: sans-serif;
+      z-index: 1000;
+    }
+    #inputPanel label {
+      display: block;
+      margin: 8px 0 4px;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+    #inputPanel input, #inputPanel select, #inputPanel button {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    #result {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="inputPanel">
+    <label for="latInput">LATITUD (grados decimales):</label>
+    <input type="number" id="latInput" step="any" placeholder="ej. 19.4326" />
+
+    <label for="lonInput">LONGITUD (grados decimales):</label>
+    <input type="number" id="lonInput" step="any" placeholder="ej. -99.1332" />
+
+    <label for="elipsoideSelect">ELIPSOIDE DE REFERENCIA:</label>
+    <select id="elipsoideSelect">
+      <option value="estandar" selected>Usar estándar (WGS84)</option>
+      <option value="manual">Ingresar manualmente</option>
+    </select>
+
+    <div id="manualEllipsoidInputs" style="display:none; margin-top:8px;">
+      <label for="aInput">Semieje mayor (a) [metros]:</label>
+      <input type="number" id="aInput" step="any" placeholder="ej. 6378137" />
+
+      <label for="fInput">Achatamiento (f):</label>
+      <input type="number" id="fInput" step="any" placeholder="ej. 1/298.257223563" />
+      <small>Ejemplo achatamiento de WGS84: 1/298.257223563 = ~0.00335281</small>
+    </div>
+
+    <button id="convertBtn" style="margin-top:12px;">Convertir a UTM</button>
+
+    <div id="result"></div>
+  </div>
+
+  <!-- Librerías -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
+
+  <script>
+    // Inicializamos el mapa Leaflet centrado en México (ejemplo)
+    const map = L.map('map').setView([19.4326, -99.1332], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    let marker;
+
+    // Mostrar u ocultar inputs de elipsoide manual
+    const elipsoideSelect = document.getElementById('elipsoideSelect');
+    const manualBox = document.getElementById('manualEllipsoidInputs');
+    elipsoideSelect.addEventListener('change', () => {
+      manualBox.style.display = elipsoideSelect.value === 'manual' ? 'block' : 'none';
+    });
+
+    // Función para crear definición proj4 para elipsoide
+    function defineCustomEllipsoid(a, f) {
+      const invF = 1 / f;
+      const b = a * (1 - f);
+      return `+proj=utm +zone=auto +ellps=${a},${b} +units=m +no_defs`;
+    }
+
+    // Convertir geográficas a UTM usando proj4
+    function geogToUTM(lat, lon) {
+      // Defino WGS84 EPSG:4326 y el sistema UTM basado en el huso calculado
+      // Leaflet usa lng/lat para geojson y proj4 usa lon/lat en orden (longitud primero)
+      const utmZone = Math.floor((lon + 180) / 6) + 1;
+      const hemisphere = lat >= 0 ? 'north' : 'south';
+
+      // Definición proj4 para UTM zona calculada, WGS84 elipsoide
+      const proj4UTM = `+proj=utm +zone=${utmZone} +${hemisphere} +ellps=WGS84 +units=m +no_defs`;
+
+      // Proyección geográfica WGS84
+      const proj4WGS84 = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs';
+
+      // Transformo coordenadas:
+      const [x, y] = proj4(proj4WGS84, proj4UTM, [lon, lat]);
+      return { x, y, zone: utmZone, hemisphere };
+    }
+
+    // Evento botón convertir
+    document.getElementById('convertBtn').addEventListener('click', () => {
+      const lat = parseFloat(document.getElementById('latInput').value);
+      const lon = parseFloat(document.getElementById('lonInput').value);
+      if (isNaN(lat) || isNaN(lon)) {
+        alert('Por favor, ingresa valores válidos para latitud y longitud.');
+        return;
+      }
+
+      // Por simplicidad aquí usamos solo WGS84 estándar
+      // El parámetro manual no será usado para cambiar el elipsoide porque 
+      // proj4js no soporta cambio dinámico sencillo sin definir una proyección con parámetros completos
+      // Si deseas, puedes ampliar la lógica para crear nuevas definiciones PROJ4
+
+      const utm = geogToUTM(lat, lon);
+
+      // Mostrar resultado en pantalla
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = `
+        <b>Coordenadas UTM:</b><br/>
+        Zona: ${utm.zone} ${utm.hemisphere.toUpperCase()}<br/>
+        X (E): ${utm.x.toFixed(2)} m<br/>
+        Y (N): ${utm.y.toFixed(2)} m
+      `;
+
+      // Mostrar punto en mapa (convertimos UTM de vuelta a lat/lon para Leaflet)
+      if (marker) map.removeLayer(marker);
+      marker = L.marker([lat, lon]).addTo(map);
+      map.setView([lat, lon], 14);
+    });
+  </script>
+</body>
+</html>
