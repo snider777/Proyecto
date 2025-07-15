@@ -66,16 +66,15 @@
   </div>
 
   <script>
-    // Abrir utm_map.html en una nueva pestaña al pulsar el botón
-    document.getElementById('btnGeoToUTM').addEventListener('click', () => {
+    // Abrir utm_map.html en nueva pestaña al pulsar el botón geog->UTM
+    document.getElementById('btnGeoToUTM').addEventListener('click', function() {
       window.open('utm_map.html', '_blank');
     });
 
-    // Aquí puedes luego agregar el evento para btnUtmToGeo si tienes archivo para esa función
-    // Ejemplo:
-    // document.getElementById('btnUtmToGeo').addEventListener('click', () => {
-    //   window.open('utm_to_geo.html', '_blank');
-    // });
+    // Abrir utm_to_geo.html en nueva pestaña al pulsar el botón UTM->geog
+    document.getElementById('btnUtmToGeo').addEventListener('click', function() {
+      window.open('utm_to_geo.html', '_blank');
+    });
   </script>
 </body>
 </html>
