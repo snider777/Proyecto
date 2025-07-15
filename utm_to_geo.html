@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Conversión UTM a Geográficas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<!-- Leaflet CSS -->
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+<style>
+  html, body, #map {
+    height: 100%;
+    margin: 0; padding: 0;
+    width: 100%;
+  }
+
+  #map {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 0;
+  }
+
+  #inputPanel {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 15px;
+    border-radius: 8px;
+    width: 280px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    font-family: sans-serif;
+    z-index: 1000;
+  }
+
+  #inputPanel label {
+    display: block;
+    margin: 8px 0 4px;
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+
+  #inputPanel input, #inputPanel select, #inputPanel button {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 1rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
+  
+  #inputPanel button {
+    margin-top: 12px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    transition: background-color 0.3s;
+  }
+  #inputPanel button:hover {
+    background-color: #0056b3;
+  }
+
+  /* Carteles resultado */
+  #utmInfo, #geoInfo {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: sans-serif;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    z-index: 1001;
+    font-size: 1rem;
+    pointer-events: none;
+  }
+
+  #utmInfo {
+    top: 20px;
+    left: 20px;
+  }
+  
+  #geoInfo {
+    bottom: 20px;
+    left: 20px;
+  }
+  
+</style>
+
+<!-- Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- proj4js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
+<!-- proj4leaflet -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4leaflet/1.0.2/proj4leaflet.js"></script>
+
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Panel de entrada -->
+<div id="inputPanel">
+  <label for="zoneInput">Zona UTM (1 - 60):</label>
+  <input type="number" id="zoneInput" min="1" max="60" placeholder="Ej. 14" />
+
+  <label for="hemisferioInput">Hemisferio:</label>
+  <select id="hemisferioInput">
+    <option value="N" selected>Norte</option>
+    <option value="S">Sur</option>
+  </select>
+
+  <label for="eastingInput">X (Easting en metros):</label>
+  <input type="number" id="eastingInput" placeholder="Ej. 500000" />
+
+  <label for="northingInput">Y (Northing en metros):</label>
+  <input type="number" id="northingInput" placeholder="Ej. 4649776" />
+
+  <button id="convertBtn">Convertir a Geográficas</button>
+</div>
+
+<!-- Carteles resultado -->
+<div id="utmInfo" style="display: none;"></div>
+<div id="geoInfo" style="display: none;"></div>
+
+<script>
+  // Definir CRS dinámico UTM con Proj4leaflet
+  function getCRSForZone(zone, hemisphere) {
+    const projStr =
+      "+proj=utm +zone=" +
+      zone +
+      (hemisphere === 'S' ? " +south" : "") +
+      " +ellps=WGS84 +units=m +no_defs";
+    return new L.Proj.CRS('EPSG:326' + (zone < 10 ? '0' + zone : zone), projStr, {
+      resolutions: [
+        8192,4096,2048,1024,512,256,128,64,32,16,8,4,2,1,0.5,0.25
+      ],
+      origin: [-20037508.342789244, 20037508.342789244]
+    });
+  }
+
+  // Crear mapa con CRS inicial para la zona 14 Norte (por default)
+  let currentCRS = getCRSForZone(14, 'N');
+  const map = L.map('map', {
+    crs: currentCRS,
+    center: [0, 0],
+    zoom: 3,
+    maxZoom: 18,
+    minZoom: 2
+  });
+
+  // Capa base más "profesional" (ESRI World Imagery)
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' +
+    'World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, ' +
+      'AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS ' +
+      'User Community',
+    maxZoom: 18
+  }).addTo(map);
+
+  // Mostrar grilla UTM básica con líneas cada 10000 m (10 km)
+  // Opción simple: usar polilíneas en la extensión mundial (más complejo en zonas)
+  // Aquí creamos líneas verticales y horizontales cada 10km para referencia
+
+  // Crear límite en metros para visualización
+  const extent = 1000000; // 1000 km alrededor del centro
+  const spacing = 10000;  // 10 km
+
+  function drawUTMGrid() {
+    // Borra las líneas previas
+    if (window.gridLinesGroup) {
+      window.gridLinesGroup.clearLayers();
+    } else {
+      window.gridLinesGroup = L.layerGroup().addTo(map);
+    }
+
+    for (let x = -extent; x <= extent; x += spacing) {
+      const line = L.polyline([[ -extent, x ], [ extent, x ]], {
+        color: '#999',
+        weight: 1,
+        opacity: 0.5,
+        interactive: false
+      });
+      window.gridLinesGroup.addLayer(line);
+    }
+    for (let y = -extent; y <= extent; y += spacing) {
+      const line = L.polyline([[ y, -extent ], [ y, extent ]], {
+        color: '#999',
+        weight: 1,
+        opacity: 0.5,
+        interactive: false
+      });
+      window.gridLinesGroup.addLayer(line);
+    }
+  }
+
+  drawUTMGrid();
+
+  // Variables para resultados y marcador
+  const utmInfoDiv = document.getElementById('utmInfo');
+  const geoInfoDiv = document.getElementById('geoInfo');
+  let marker;
+
+  // Función para validar entrada
+  function validateInputs(zone, hem, x, y) {
+    if (zone < 1 || zone > 60) return 'Zona UTM debe ser entre 1 y 60.';
+    if (hem !== 'N' && hem !== 'S') return 'Hemisferio inválido.';
+    if (isNaN(x) || x < 100000 || x > 1000000) return 'X (Easting) debe estar entre 100,000 y 1,000,000 metros.';
+    if (isNaN(y) || y < 0 || y > 10000000) return 'Y (Northing) inválido o fuera de rango.';
+    return null;
+  }
+  
+  // Convertir UTM -> LatLon usando Proj4leaflet y Proj4js
+  function convertUTMToLatLon(zone, hemisphere, x, y) {
+    // Define la proyección UTM para zona y hemisferio
+    const projUTM = "+proj=utm +zone=" + zone + (hemisphere === 'S' ? " +south" : "") + " +ellps=WGS84 +units=m +no_defs";
+    const projWGS84 = "+proj=longlat +datum=WGS84 +no_defs";
+
+    // Usar proj4 para reproyectar
+    const [lon, lat] = proj4(projUTM, projWGS84, [x, y]);
+    return { lat, lon };
+  }
+
+  // Cambiar CRS del mapa al tratado para la zona y hemisferio
+  function updateMapCRS(zone, hem) {
+    map.options.crs = getCRSForZone(zone, hem);
+    map.setView([0, 0], 3); // Reset vista para evitar problema CRS
+    // Eliminar capa base y añadir otra nueva para refrescar (simple workaround)
+    map.eachLayer((layer) => map.removeLayer(layer));
+
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' +
+      'World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, ' +
+        'AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS ' +
+        'User Community',
+      maxZoom: 18
+    }).addTo(map);
+
+    drawUTMGrid();
+  }
+
+  // Evento botón convertir
+  document.getElementById('convertBtn').addEventListener('click', () => {
+    const zone = parseInt(document.getElementById('zoneInput').value);
+    const hemisphere = document.getElementById('hemisferioInput').value;
+    const easting = parseFloat(document.getElementById('eastingInput').value);
+    const northing = parseFloat(document.getElementById('northingInput').value);
+
+    const error = validateInputs(zone, hemisphere, easting, northing);
+    if (error) {
+      alert(error);
+      return;
+    }
+
+    // Actualizar CRS del mapa para la zona y hemisferio escogidos
+    updateMapCRS(zone, hemisphere);
+
+    // Convertir a LatLon
+    const geo = convertUTMToLatLon(zone, hemisphere, easting, northing);
+
+    // Mostrar carteles con valores
+    utmInfoDiv.style.display = 'block';
+    utmInfoDiv.innerHTML = `<b>Zona UTM:</b> ${zone} ${hemisphere}<br/><b>X:</b> ${easting.toFixed(2)} m | <b>Y:</b> ${northing.toFixed(2)} m`;
+
+    geoInfoDiv.style.display = 'block';
+    geoInfoDiv.innerHTML = `<b>Latitud:</b> ${geo.lat.toFixed(6)}°<br/><b>Longitud:</b> ${geo.lon.toFixed(6)}°`;
+
+    // Marcar punto convertido y centrar mapa
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([geo.lat, geo.lon]).addTo(map);
+    map.setView([geo.lat, geo.lon], 12);
+  });
+</script>
+
+</body>
+</html>
