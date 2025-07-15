@@ -1,45 +1,46 @@
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-
-public class ImagenConBoton extends JFrame {
-
-    public ImagenConBoton() {
-        setTitle("Imagen con Botón EMPEZAR");
-        setSize(800, 600);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); // Centrar en pantalla
-
-        // Panel que contiene imagen de fondo y botón
-        FondoPanel fondo = new FondoPanel("mundo.jpg");
-        fondo.setLayout(new GridBagLayout()); // Para centrar el botón
-        JButton boton = new JButton("EMPEZAR");
-
-        boton.setFont(new Font("Arial", Font.BOLD, 20));
-        fondo.add(boton); // Se ubicará en el centro gracias a GridBagLayout
-
-        add(fondo);
-
-        setVisible(true);
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Pantalla de Inicio</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      width: 100vw;
+      background: url('mundo.jpg') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-
-    // Clase interna que dibuja la imagen como fondo
-    class FondoPanel extends JPanel {
-        private Image imagen;
-
-        public FondoPanel(String archivoImagen) {
-            imagen = new ImageIcon(archivoImagen).getImage();
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            // Dibuja la imagen centrada y escalada al tamaño del panel
-            g.drawImage(imagen, 0, 0, getWidth(), getHeight(), this);
-        }
+    .boton-contenedor {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 100vw;
     }
-
-    public static void main(String[] args) {
-        new ImagenConBoton();
+    .boton-empezar {
+      padding: 20px 40px;
+      font-size: 2rem;
+      background-color: rgba(0, 123, 255, 0.85);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: background 0.2s;
     }
-}
+    .boton-empezar:hover {
+      background-color: rgba(0, 100, 210, 0.9);
+    }
+  </style>
+</head>
+<body>
+  <div class="boton-contenedor">
+    <button class="boton-empezar">EMPEZAR</button>
+  </div>
+</body>
+</html>
