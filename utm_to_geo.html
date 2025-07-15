@@ -2,70 +2,32 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<title>Conversión UTM a Geográficas con Grilla y Zona Sombreada</title>
+<title>Conversión UTM a Geográficas con grilla y zona sombreada</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
 <style>
-  html, body, #map {
-    height: 100%;
-    margin: 0; padding: 0;
-    width: 100%;
-  }
-
-  #map {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 0;
-  }
-
+  html, body, #map { height: 100%; margin: 0; padding: 0; width: 100%; }
+  #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; }
   #inputPanel {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 15px;
-    border-radius: 8px;
-    width: 320px;
+    position: absolute; bottom: 20px; right: 20px;
+    background: rgba(255,255,255,0.95); padding: 15px;
+    border-radius: 8px; width: 320px;
     box-shadow: 0 0 15px rgba(0,0,0,0.3);
-    font-family: sans-serif;
-    z-index: 1000;
+    font-family: sans-serif; z-index: 1000;
   }
-
-  #inputPanel label {
-    display: block;
-    margin: 8px 0 4px;
-    font-weight: bold;
-    font-size: 0.9rem;
-  }
-
+  #inputPanel label { display: block; margin: 8px 0 4px; font-weight: bold; font-size: 0.9rem; }
   #inputPanel input, #inputPanel select, #inputPanel button {
-    width: 100%;
-    padding: 6px 8px;
-    font-size: 1rem;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
+    width: 100%; padding: 6px 8px; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box;
   }
-  
   #inputPanel button {
-    margin-top: 12px;
-    cursor: pointer;
-    background-color: #007bff;
-    color: white;
-    border: none;
+    margin-top: 12px; cursor: pointer; background-color: #007bff; color: white; border: none;
     transition: background-color 0.3s;
   }
-  #inputPanel button:hover {
-    background-color: #0056b3;
-  }
-
-  /* Carteles resultado */
+  #inputPanel button:hover { background-color: #0056b3; }
   #utmInfo, #geoInfo {
     position: absolute;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255,255,255,0.9);
     padding: 10px 15px;
     border-radius: 8px;
     font-family: sans-serif;
@@ -75,18 +37,8 @@
     pointer-events: none;
     white-space: nowrap;
   }
-
-  #utmInfo {
-    top: 20px;
-    left: 20px;
-  }
-  
-  #geoInfo {
-    bottom: 20px;
-    left: 20px;
-  }
-
-  /* Estilo de etiquetas en la grilla */
+  #utmInfo { top: 20px; left: 20px; }
+  #geoInfo { bottom: 20px; left: 20px; }
   .grid-label {
     font-size: 11px;
     color: #555;
@@ -95,14 +47,6 @@
     text-shadow: 0 0 2px white;
   }
 </style>
-
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- Proj4js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
-<!-- Proj4Leaflet -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4leaflet/1.0.2/proj4leaflet.js"></script>
-
 </head>
 <body>
 
@@ -111,227 +55,152 @@
 <div id="inputPanel">
   <label for="zoneInput">Zona UTM (1 - 60):</label>
   <input type="number" id="zoneInput" min="1" max="60" placeholder="Ej. 14" />
-
   <label for="hemisferioInput">Hemisferio:</label>
   <select id="hemisferioInput">
     <option value="N" selected>Norte</option>
     <option value="S">Sur</option>
   </select>
-
   <label for="eastingInput">X (Easting en metros):</label>
   <input type="number" id="eastingInput" placeholder="Ej. 500000" />
-
   <label for="northingInput">Y (Northing en metros):</label>
   <input type="number" id="northingInput" placeholder="Ej. 4649776" />
-
   <button id="convertBtn">Convertir a Geográficas</button>
 </div>
 
 <div id="utmInfo" style="display:none;"></div>
 <div id="geoInfo" style="display:none;"></div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
+
 <script>
-  // Crear CRS UTM específico
-  function getCRSForZone(zone, hemi) {
-    const southParam = hemi === "S" ? "+south" : "";
-    const projString = `+proj=utm +zone=${zone} ${southParam} +ellps=WGS84 +units=m +no_defs`;
-    return new L.Proj.CRS('EPSG:326' + (zone < 10 ? '0' + zone : zone) , projString, {
-      resolutions: [
-        8192,4096,2048,1024,512,256,128,64,32,16,8,4,2,1,0.5,0.25
-      ],
-      origin: [-20037508.342789244, 20037508.342789244]
-    });
-  }
+  // Inicializa mapa WebMercator para México por defecto
+  const map = L.map('map').setView([20, -100], 4);
 
-  // Parámetros globales y variables
-  let map, marker, utmGridGroup, zoneHighlightLayer;
-
-  // Inicialización con Web Mercator para facilidad inicial
-  const initialCenter = [20, -100];
-  const initialZoom = 4;
-
-  map = L.map('map').setView(initialCenter, initialZoom);
-
-  // Capa base profesional ESRI WorldImagery
-  let baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' +
+  // Capa base profesional ESRI World Imagery
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' +
     'World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    attribution: 'Tiles © Esri | Source: Esri et al.',
     maxZoom: 18
   }).addTo(map);
 
-  // Validación simple
+  let marker;
+  let utmGridGroup = L.layerGroup().addTo(map);
+  let zonePolygon;
+
   function validateInputs(zone, hemi, x, y) {
-    if (isNaN(zone) || zone<1 || zone>60) return 'Zona UTM debe estar entre 1 y 60.';
-    if (hemi !== "N" && hemi !== "S") return 'Hemisferio inválido.';
+    if (isNaN(zone) || zone < 1 || zone > 60) return 'Zona UTM debe estar entre 1 y 60.';
+    if (hemi !== 'N' && hemi !== 'S') return 'Hemisferio inválido.';
     if (isNaN(x) || x < 100000 || x > 1000000) return 'X (Easting) debe estar entre 100,000 y 1,000,000 metros.';
     if (isNaN(y) || y < 0 || y > 10000000) return 'Y (Northing) inválido o fuera de rango.';
     return null;
   }
 
-  // Crear polígono sombreado para zona UTM activa
+  // Crea polígono aproximado zona UTM para sombrear (lat/lon)
   function createZonePolygon(zone, hemi) {
-    // Limites mundiales aproximados de zonas UTM (WGS84)
-    // Latitud mínima y máxima para cada hemisferio
-    const lat_min = (hemi === "N") ? 0 : -80;
-    const lat_max = (hemi === "N") ? 84 : 0;
-    // Longitud base de la zona:
+    const lat_min = (hemi === 'N') ? 0 : -80;
+    const lat_max = (hemi === 'N') ? 84 : 0;
     const lon_min = (zone - 1) * 6 - 180;
     const lon_max = lon_min + 6;
-
-    // Esquinas en LatLon (aproximadas)
-    // Coordenadas: [lat, lon]
-    let corners = [
+    const corners = [
       [lat_min, lon_min],
       [lat_min, lon_max],
       [lat_max, lon_max],
       [lat_max, lon_min],
       [lat_min, lon_min]
     ];
-
     return L.polygon(corners, {
-      color: "#0055ff",
+      color: '#0055ff',
       weight: 2,
-      fillColor: "#0055ff",
+      fillColor: '#0055ff',
       fillOpacity: 0.15,
       interactive: false
     });
   }
 
-  // Crear grilla UTM estilo estándar (líneas cada 10 km)
-  function createUTMGrid(zone, hemi) {
-    if (utmGridGroup) {
-      map.removeLayer(utmGridGroup);
-    }
-    utmGridGroup = L.layerGroup();
+  // Dibuja grilla UTM visible estilo estándar en lat/lon, líneas cada 10 km aprox.
+  function drawUTMGrid(zone, hemi) {
+    utmGridGroup.clearLayers();
 
-    // Proyección UTM
-    const southParam = hemi === "S" ? "+south" : "";
-    const projUTM = `+proj=utm +zone=${zone} ${southParam} +ellps=WGS84 +units=m +no_defs`;
-    const projWGS84 = "+proj=longlat +datum=WGS84 +no_defs";
+    // Proyección UTM para la zona con Proj4
+    const south = (hemi === 'S') ? '+south' : '';
+    const projUTM = `+proj=utm +zone=${zone} ${south} +ellps=WGS84 +units=m +no_defs`;
+    const projWGS84 = '+proj=longlat +datum=WGS84 +no_defs';
 
-    // Rango GRID alrededor del proveedor, ajuste para visualización
-    // 100 km a cada lado (para no saturar)
-    const gridSpacing = 10000; // 10km
-    const gridRange = 10; // número de líneas en cada dirección
+    const spacing = 10000; // 10 km
+    const numLines = 20; // 20 líneas cada dirección
 
-    // Función para añadir líneas con etiquetas
-    function addGridLines() {
-      // Bases para líneas verticales (Easting)
-      for(let i = -gridRange; i <= gridRange; i++) {
-        let points = [];
-        for(let j = -gridRange; j <= gridRange; j++) {
-          let x = 500000 + i * gridSpacing; // 500000 es centro Easting zona
-          let y = j * gridSpacing;
-          // Convertir UTM a latlon
-          const [lon, lat] = proj4(projUTM, projWGS84, [x, y]);
-          points.push([lat, lon]);
-        }
-        let polyline = L.polyline(points, {color:'#666', weight:1, opacity:0.5});
-        utmGridGroup.addLayer(polyline);
+    // Centro easting típico 500000 m
+    const centerEasting = 500000;
 
-        // Etiqueta de línea
-        let labelPoint = points[Math.floor(points.length/2)];
-        let label = L.marker(labelPoint, {
-          icon: L.divIcon({
-            className: 'grid-label',
-            html: `${Math.round(500000 + i*gridSpacing)}`,
-            iconSize: [0,0]
-          }),
-          interactive:false
-        });
-        utmGridGroup.addLayer(label);
+    // Líneas verticales (Easting)
+    for(let i = -numLines; i <= numLines; i++){
+      let latlngs = [];
+      for(let j = 0; j <= numLines * 2; j++){
+        const easting = centerEasting + i*spacing;
+        const northing = j * spacing;
+        const [lon, lat] = proj4(projUTM, projWGS84, [easting, northing]);
+        latlngs.push([lat, lon]);
       }
-
-      // Líneas horizontales (Northing)
-      for(let j = -gridRange; j <= gridRange; j++) {
-        let points = [];
-        for(let i = -gridRange; i <= gridRange; i++) {
-          let x = 500000 + i * gridSpacing;
-          let y = j * gridSpacing;
-          const [lon, lat] = proj4(projUTM, projWGS84, [x, y]);
-          points.push([lat, lon]);
-        }
-        let polyline = L.polyline(points, {color:'#666', weight:1, opacity:0.5});
-        utmGridGroup.addLayer(polyline);
-
-        // Etiqueta línea horizontal
-        // Ponemos al inicio de la línea
-        let labelPoint = points[0];
-        let label = L.marker(labelPoint, {
-          icon: L.divIcon({
-            className: 'grid-label',
-            html: `${Math.round(j*gridSpacing)}`,
-            iconSize: [0,0]
-          }),
-          interactive:false
-        });
-        utmGridGroup.addLayer(label);
-      }
+      L.polyline(latlngs, {color:'#666', weight:1, opacity:0.5}).addTo(utmGridGroup);
     }
 
-    addGridLines();
-    utmGridGroup.addTo(map);
+    // Líneas horizontales (Northing)
+    for(let j = 0; j <= numLines * 2; j++){
+      let latlngs = [];
+      for(let i = -numLines; i <= numLines; i++){
+        const easting = centerEasting + i*spacing;
+        const northing = j * spacing;
+        const [lon, lat] = proj4(projUTM, projWGS84, [easting, northing]);
+        latlngs.push([lat, lon]);
+      }
+      L.polyline(latlngs, {color:'#666', weight:1, opacity:0.5}).addTo(utmGridGroup);
+    }
   }
 
-  // Estado inicial: sin CRS cambiada ni capa zona ni grilla
-  let zoneHighlightPolygon;
-
-  // Botón convertir evento
   document.getElementById('convertBtn').addEventListener('click', () => {
     const zone = parseInt(document.getElementById('zoneInput').value);
     const hemi = document.getElementById('hemisferioInput').value;
     const x = parseFloat(document.getElementById('eastingInput').value);
     const y = parseFloat(document.getElementById('northingInput').value);
 
-    const err = validateInputs(zone, hemi, x, y);
-    if (err) {
-      alert(err);
+    const error = validateInputs(zone, hemi, x, y);
+    if (error){
+      alert(error);
       return;
     }
 
-    // Crear CRS para la zona
-    const newCRS = getCRSForZone(zone, hemi);
-
-    // Cambiar CRS y recargar capa base (workaround para reproyeccion)
-    if(map.options.crs && map.options.crs !== newCRS){
-      map.options.crs = newCRS;
-      // Remove layers and add base layer again
-      map.eachLayer(layer => map.removeLayer(layer));
-      baseLayer.addTo(map);
-    }
-
-    // Convertir UTM a Lat/Lon
-    const projUTM = `+proj=utm +zone=${zone} ${(hemi==='S')?'+south':''} +ellps=WGS84 +units=m +no_defs`;
-    const projWGS84 = "+proj=longlat +datum=WGS84 +no_defs";
-    const [lon, lat] = proj4(projUTM, projWGS84, [x,y]);
+    // Conversión UTM a LatLon
+    const south = (hemi === 'S') ? '+south' : '';
+    const utmProj = `+proj=utm +zone=${zone} ${south} +ellps=WGS84 +units=m +no_defs`;
+    const wgs84Proj = '+proj=longlat +datum=WGS84 +no_defs';
+    const [lon, lat] = proj4(utmProj, wgs84Proj, [x, y]);
 
     // Mostrar carteles
     const utmInfoDiv = document.getElementById('utmInfo');
     utmInfoDiv.style.display = 'block';
-    utmInfoDiv.innerHTML = `<b>Zona UTM:</b> ${zone} ${hemi} <br/><b>X:</b> ${x.toFixed(2)} m | <b>Y:</b> ${y.toFixed(2)} m`;
+    utmInfoDiv.innerHTML = `<b>Zona UTM:</b> ${zone} ${hemi}<br><b>X:</b> ${x.toFixed(2)} m | <b>Y:</b> ${y.toFixed(2)} m`;
 
     const geoInfoDiv = document.getElementById('geoInfo');
     geoInfoDiv.style.display = 'block';
-    geoInfoDiv.innerHTML = `<b>Latitud:</b> ${lat.toFixed(6)}° <br/><b>Longitud:</b> ${lon.toFixed(6)}°`;
+    geoInfoDiv.innerHTML = `<b>Latitud:</b> ${lat.toFixed(6)}°<br><b>Longitud:</b> ${lon.toFixed(6)}°`;
 
-    // Añadir o mover marcador al punto
+    // Mostrar o mover marcador
     if(marker){
       marker.setLatLng([lat, lon]);
-    }else{
+    } else {
       marker = L.marker([lat, lon]).addTo(map);
     }
-
-    // Centrar y hacer zoom adecuado
     map.setView([lat, lon], 14);
 
-    // Añadir grilla UTM visible
-    createUTMGrid(zone, hemi);
+    // Dibuja grilla UTM y sombreado zona aproximada en lat/lon
+    drawUTMGrid(zone, hemi);
 
-    // Añadir sombra de zona UTM activa
-    if(zoneHighlightPolygon){
-      map.removeLayer(zoneHighlightPolygon);
+    if(zonePolygon){
+      map.removeLayer(zonePolygon);
     }
-    zoneHighlightPolygon = createZonePolygon(zone, hemi).addTo(map);
+    zonePolygon = createZonePolygon(zone, hemi);
+    zonePolygon.addTo(map);
   });
 </script>
 
