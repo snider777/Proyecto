@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Opciones de Conversión</title>
   <style>
     body {
@@ -57,12 +57,25 @@
 </head>
 <body>
   <div class="half left-half">
-    <img class="opcion-imagen" src="opciones1.jpg" alt="Opción 1">
-    <button class="opcion-boton">PASAR COORDENADAS GEOGRÁFICAS A UTM</button>
+    <img class="opcion-imagen" src="opciones1.jpg" alt="Opción 1" />
+    <button class="opcion-boton" id="btnGeoToUTM">PASAR COORDENADAS GEOGRÁFICAS A UTM</button>
   </div>
   <div class="half right-half">
-    <img class="opcion-imagen" src="opciones2.jpg" alt="Opción 2">
-    <button class="opcion-boton">PASAR DE COORDENADAS UTM A GEOGRÁFICAS</button>
+    <img class="opcion-imagen" src="opciones2.jpg" alt="Opción 2" />
+    <button class="opcion-boton" id="btnUtmToGeo">PASAR DE COORDENADAS UTM A GEOGRÁFICAS</button>
   </div>
+
+  <script>
+    // Abrir utm_map.html en una nueva pestaña al pulsar el botón
+    document.getElementById('btnGeoToUTM').addEventListener('click', () => {
+      window.open('utm_map.html', '_blank');
+    });
+
+    // Aquí puedes luego agregar el evento para btnUtmToGeo si tienes archivo para esa función
+    // Ejemplo:
+    // document.getElementById('btnUtmToGeo').addEventListener('click', () => {
+    //   window.open('utm_to_geo.html', '_blank');
+    // });
+  </script>
 </body>
 </html>
