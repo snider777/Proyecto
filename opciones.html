@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Opciones de Conversión</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: row;
+      background: #f2f2f2;
+      font-family: sans-serif;
+    }
+    .half {
+      width: 50vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .left-half {
+      background: #e6f0ff;
+      border-right: 2px solid #c0c0c0;
+    }
+    .right-half {
+      background: #ffe6e6;
+    }
+    .opcion-imagen {
+      max-width: 70%;
+      max-height: 55vh;
+      display: block;
+      margin-bottom: 35px;
+      margin-top: 0;
+      object-fit: contain;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+      border-radius: 8px;
+    }
+    .opcion-boton {
+      padding: 18px 32px;
+      font-size: 1.2rem;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin: 0;
+    }
+    .opcion-boton:hover {
+      background-color: #005fa3;
+    }
+  </style>
+</head>
+<body>
+  <div class="half left-half">
+    <img class="opcion-imagen" src="opciones1.jpg" alt="Opción 1">
+    <button class="opcion-boton">PASAR COORDENADAS GEOGRÁFICAS A UTM</button>
+  </div>
+  <div class="half right-half">
+    <img class="opcion-imagen" src="opciones2.jpg" alt="Opción 2">
+    <button class="opcion-boton">PASAR DE COORDENADAS UTM A GEOGRÁFICAS</button>
+  </div>
+</body>
+</html>
