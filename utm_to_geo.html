@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<title>Conversión UTM a Geográficas</title>
+<title>Conversión UTM a Geográficas con Grilla y Zona Sombreada</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <!-- Leaflet CSS -->
@@ -28,7 +28,7 @@
     background: rgba(255, 255, 255, 0.95);
     padding: 15px;
     border-radius: 8px;
-    width: 300px;
+    width: 320px;
     box-shadow: 0 0 15px rgba(0,0,0,0.3);
     font-family: sans-serif;
     z-index: 1000;
@@ -85,8 +85,15 @@
     bottom: 20px;
     left: 20px;
   }
-  
-  /* Grilla fina overlay con CSS quizá para referencia (opcional) */
+
+  /* Estilo de etiquetas en la grilla */
+  .grid-label {
+    font-size: 11px;
+    color: #555;
+    pointer-events: none;
+    user-select: none;
+    text-shadow: 0 0 2px white;
+  }
 </style>
 
 <!-- Leaflet JS -->
@@ -101,7 +108,6 @@
 
 <div id="map"></div>
 
-<!-- Panel inputs -->
 <div id="inputPanel">
   <label for="zoneInput">Zona UTM (1 - 60):</label>
   <input type="number" id="zoneInput" min="1" max="60" placeholder="Ej. 14" />
@@ -121,12 +127,11 @@
   <button id="convertBtn">Convertir a Geográficas</button>
 </div>
 
-<!-- Carteles resultado -->
 <div id="utmInfo" style="display:none;"></div>
 <div id="geoInfo" style="display:none;"></div>
 
 <script>
-  // Función para crear CRS dinámico para UTM (zona, hemisferio)
+  // Crear CRS UTM específico
   function getCRSForZone(zone, hemi) {
     const southParam = hemi === "S" ? "+south" : "";
     const projString = `+proj=utm +zone=${zone} ${southParam} +ellps=WGS84 +units=m +no_defs`;
@@ -138,20 +143,23 @@
     });
   }
 
-  // Inicializamos mapa con CRS global WebMercator WGS84 para empezar
-  let map = L.map('map', {
-    center: [20, -100],
-    zoom: 4
-  });
+  // Parámetros globales y variables
+  let map, marker, utmGridGroup, zoneHighlightLayer;
 
-  // Capa base profesional ESRI World Imagery
+  // Inicialización con Web Mercator para facilidad inicial
+  const initialCenter = [20, -100];
+  const initialZoom = 4;
+
+  map = L.map('map').setView(initialCenter, initialZoom);
+
+  // Capa base profesional ESRI WorldImagery
   let baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' +
     'World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
     maxZoom: 18
   }).addTo(map);
 
-  // Función para validar entradas
+  // Validación simple
   function validateInputs(zone, hemi, x, y) {
     if (isNaN(zone) || zone<1 || zone>60) return 'Zona UTM debe estar entre 1 y 60.';
     if (hemi !== "N" && hemi !== "S") return 'Hemisferio inválido.';
@@ -160,93 +168,170 @@
     return null;
   }
 
-  let utmInfoDiv = document.getElementById('utmInfo');
-  let geoInfoDiv = document.getElementById('geoInfo');
-  let marker;
+  // Crear polígono sombreado para zona UTM activa
+  function createZonePolygon(zone, hemi) {
+    // Limites mundiales aproximados de zonas UTM (WGS84)
+    // Latitud mínima y máxima para cada hemisferio
+    const lat_min = (hemi === "N") ? 0 : -80;
+    const lat_max = (hemi === "N") ? 84 : 0;
+    // Longitud base de la zona:
+    const lon_min = (zone - 1) * 6 - 180;
+    const lon_max = lon_min + 6;
 
-  // Evento botón convertir
+    // Esquinas en LatLon (aproximadas)
+    // Coordenadas: [lat, lon]
+    let corners = [
+      [lat_min, lon_min],
+      [lat_min, lon_max],
+      [lat_max, lon_max],
+      [lat_max, lon_min],
+      [lat_min, lon_min]
+    ];
+
+    return L.polygon(corners, {
+      color: "#0055ff",
+      weight: 2,
+      fillColor: "#0055ff",
+      fillOpacity: 0.15,
+      interactive: false
+    });
+  }
+
+  // Crear grilla UTM estilo estándar (líneas cada 10 km)
+  function createUTMGrid(zone, hemi) {
+    if (utmGridGroup) {
+      map.removeLayer(utmGridGroup);
+    }
+    utmGridGroup = L.layerGroup();
+
+    // Proyección UTM
+    const southParam = hemi === "S" ? "+south" : "";
+    const projUTM = `+proj=utm +zone=${zone} ${southParam} +ellps=WGS84 +units=m +no_defs`;
+    const projWGS84 = "+proj=longlat +datum=WGS84 +no_defs";
+
+    // Rango GRID alrededor del proveedor, ajuste para visualización
+    // 100 km a cada lado (para no saturar)
+    const gridSpacing = 10000; // 10km
+    const gridRange = 10; // número de líneas en cada dirección
+
+    // Función para añadir líneas con etiquetas
+    function addGridLines() {
+      // Bases para líneas verticales (Easting)
+      for(let i = -gridRange; i <= gridRange; i++) {
+        let points = [];
+        for(let j = -gridRange; j <= gridRange; j++) {
+          let x = 500000 + i * gridSpacing; // 500000 es centro Easting zona
+          let y = j * gridSpacing;
+          // Convertir UTM a latlon
+          const [lon, lat] = proj4(projUTM, projWGS84, [x, y]);
+          points.push([lat, lon]);
+        }
+        let polyline = L.polyline(points, {color:'#666', weight:1, opacity:0.5});
+        utmGridGroup.addLayer(polyline);
+
+        // Etiqueta de línea
+        let labelPoint = points[Math.floor(points.length/2)];
+        let label = L.marker(labelPoint, {
+          icon: L.divIcon({
+            className: 'grid-label',
+            html: `${Math.round(500000 + i*gridSpacing)}`,
+            iconSize: [0,0]
+          }),
+          interactive:false
+        });
+        utmGridGroup.addLayer(label);
+      }
+
+      // Líneas horizontales (Northing)
+      for(let j = -gridRange; j <= gridRange; j++) {
+        let points = [];
+        for(let i = -gridRange; i <= gridRange; i++) {
+          let x = 500000 + i * gridSpacing;
+          let y = j * gridSpacing;
+          const [lon, lat] = proj4(projUTM, projWGS84, [x, y]);
+          points.push([lat, lon]);
+        }
+        let polyline = L.polyline(points, {color:'#666', weight:1, opacity:0.5});
+        utmGridGroup.addLayer(polyline);
+
+        // Etiqueta línea horizontal
+        // Ponemos al inicio de la línea
+        let labelPoint = points[0];
+        let label = L.marker(labelPoint, {
+          icon: L.divIcon({
+            className: 'grid-label',
+            html: `${Math.round(j*gridSpacing)}`,
+            iconSize: [0,0]
+          }),
+          interactive:false
+        });
+        utmGridGroup.addLayer(label);
+      }
+    }
+
+    addGridLines();
+    utmGridGroup.addTo(map);
+  }
+
+  // Estado inicial: sin CRS cambiada ni capa zona ni grilla
+  let zoneHighlightPolygon;
+
+  // Botón convertir evento
   document.getElementById('convertBtn').addEventListener('click', () => {
     const zone = parseInt(document.getElementById('zoneInput').value);
     const hemi = document.getElementById('hemisferioInput').value;
     const x = parseFloat(document.getElementById('eastingInput').value);
     const y = parseFloat(document.getElementById('northingInput').value);
 
-    const error = validateInputs(zone, hemi, x, y);
-    if (error) {
-      alert(error);
+    const err = validateInputs(zone, hemi, x, y);
+    if (err) {
+      alert(err);
       return;
     }
 
-    // Convertir UTM a LatLon con proj4js
-    const projUTM = `+proj=utm +zone=${zone} ${hemi === "S" ? "+south" : ""} +ellps=WGS84 +units=m +no_defs`;
+    // Crear CRS para la zona
+    const newCRS = getCRSForZone(zone, hemi);
+
+    // Cambiar CRS y recargar capa base (workaround para reproyeccion)
+    if(map.options.crs && map.options.crs !== newCRS){
+      map.options.crs = newCRS;
+      // Remove layers and add base layer again
+      map.eachLayer(layer => map.removeLayer(layer));
+      baseLayer.addTo(map);
+    }
+
+    // Convertir UTM a Lat/Lon
+    const projUTM = `+proj=utm +zone=${zone} ${(hemi==='S')?'+south':''} +ellps=WGS84 +units=m +no_defs`;
     const projWGS84 = "+proj=longlat +datum=WGS84 +no_defs";
-    const [lon, lat] = proj4(projUTM, projWGS84, [x, y]);
+    const [lon, lat] = proj4(projUTM, projWGS84, [x,y]);
 
-    // Mostrar info en carteles
+    // Mostrar carteles
+    const utmInfoDiv = document.getElementById('utmInfo');
     utmInfoDiv.style.display = 'block';
-    utmInfoDiv.innerHTML =
-      `<b>Zona UTM:</b> ${zone} ${hemi} <br><b>X:</b> ${x.toFixed(2)} m | <b>Y:</b> ${y.toFixed(2)} m`;
+    utmInfoDiv.innerHTML = `<b>Zona UTM:</b> ${zone} ${hemi} <br/><b>X:</b> ${x.toFixed(2)} m | <b>Y:</b> ${y.toFixed(2)} m`;
 
+    const geoInfoDiv = document.getElementById('geoInfo');
     geoInfoDiv.style.display = 'block';
-    geoInfoDiv.innerHTML =
-      `<b>Latitud:</b> ${lat.toFixed(6)}° <br> <b>Longitud:</b> ${lon.toFixed(6)}°`;
+    geoInfoDiv.innerHTML = `<b>Latitud:</b> ${lat.toFixed(6)}° <br/><b>Longitud:</b> ${lon.toFixed(6)}°`;
 
-    // Añadir o mover marcador
-    if (marker) {
+    // Añadir o mover marcador al punto
+    if(marker){
       marker.setLatLng([lat, lon]);
-    } else {
+    }else{
       marker = L.marker([lat, lon]).addTo(map);
     }
 
-    // Centrar mapa y ajustar zoom
+    // Centrar y hacer zoom adecuado
     map.setView([lat, lon], 14);
 
-    // Si quieres, aquí podrías añadir un overlay con líneas UTM para la zona, pero 
-    // Leaflet no tiene grilla UTM estándar out-of-the-box. Podrías usar polilíneas o plugins.
+    // Añadir grilla UTM visible
+    createUTMGrid(zone, hemi);
 
-    // Como referencia visual sencilla: 
-    // Crear líneas UTM cada 10km (10000m) en entorno del marcador:
-    // Para evitar sobrecarga, eliminamos previas al crear nuevas.
-
-    if (window.utmGridGroup) {
-      window.utmGridGroup.clearLayers();
-    } else {
-      window.utmGridGroup = L.layerGroup().addTo(map);
+    // Añadir sombra de zona UTM activa
+    if(zoneHighlightPolygon){
+      map.removeLayer(zoneHighlightPolygon);
     }
-
-    const gridSize = 10000; // 10km
-    const range = 10; // 10 líneas a cada lado (100km)
-
-    // Redondear X,Y a múltiplo de gridSize inferior
-    const baseX = Math.floor(x / gridSize) * gridSize;
-    const baseY = Math.floor(y / gridSize) * gridSize;
-
-    for(let i = -range; i <= range; i++) {
-      // Líneas verticales (Easting)
-      let lineCoords = [];
-      for(let j = -range; j <= range; j++){
-        // Convertir UTM a latlon para cada punto
-        const utmX = baseX + i * gridSize;
-        const utmY = baseY + j * gridSize;
-        const [lng, lat] = proj4(projUTM, projWGS84, [utmX, utmY]);
-        lineCoords.push([lat, lng]);
-      }
-      const polyLine = L.polyline(lineCoords, {color: '#555', weight: 1, opacity: 0.3});
-      window.utmGridGroup.addLayer(polyLine);
-    }
-
-    for(let j = -range; j <= range; j++) {
-      // Líneas horizontales (Northing)
-      let lineCoords = [];
-      for(let i = -range; i <= range; i++) {
-        const utmX = baseX + i * gridSize;
-        const utmY = baseY + j * gridSize;
-        const [lng, lat] = proj4(projUTM, projWGS84, [utmX, utmY]);
-        lineCoords.push([lat, lng]);
-      }
-      const polyLine = L.polyline(lineCoords, {color: '#555', weight: 1, opacity: 0.3});
-      window.utmGridGroup.addLayer(polyLine);
-    }
+    zoneHighlightPolygon = createZonePolygon(zone, hemi).addTo(map);
   });
 </script>
 
