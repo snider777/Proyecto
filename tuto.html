@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Conceptos Geográficos</title>
+<title>Conceptos Geográficos con Lluvia de Partículas</title>
 <style>
+  /* Fondo con imagen */
   html, body {
     margin: 0;
     height: 100%;
@@ -12,12 +13,26 @@
     background: url('fondo.jpg') no-repeat center center fixed;
     background-size: cover;
     color: #000;
+    overflow: hidden;
   }
 
+  /* Canvas ocupa toda la pantalla, detrás del contenido */
+  #particle-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Contenedor de la tabla en primer plano */
   .tabla-contenedor {
+    position: relative;
+    z-index: 1;
     max-width: 700px;
     margin: 40px auto;
-    background: rgba(144, 238, 144, 0.7); /* verde claro con transparencia */
+    background: rgba(144, 238, 144, 0.7); /* verde claro translúcido */
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
@@ -36,17 +51,19 @@
   }
 
   th {
-    background-color: rgba(0, 128, 0, 0.3); /* verde un poco más oscuro y transparente */
+    background-color: rgba(0, 128, 0, 0.3); /* verde más oscuro translúcido */
     font-weight: bold;
     font-size: 1.1rem;
   }
 
-  tr:nth-child(even) {
+  tbody tr:nth-child(even) {
     background-color: rgba(144, 238, 144, 0.4);
   }
 </style>
 </head>
 <body>
+
+<canvas id="particle-canvas"></canvas>
 
 <div class="tabla-contenedor">
   <table>
@@ -83,15 +100,71 @@
       </tr>
       <tr>
         <td>7. Easting</td>
-        <td>Distancia hacia el este en un sistema de coordenadas proyectadas (como UTM), representando la posición en metros a partir de un origen fijado (false easting).</td>
+        <td>Distancia hacia el este en un sistema de coordenadas proyectadas (como UTM), que representa la posición en metros a partir de un origen definido (false easting).</td>
       </tr>
       <tr>
         <td>8. Northing</td>
-        <td>Distancia hacia el norte en un sistema de coordenadas proyectadas (como UTM), representando la posición en metros a partir de un origen fijado (false northing).</td>
+        <td>Distancia hacia el norte en un sistema de coordenadas proyectadas (como UTM), que representa la posición en metros a partir de un origen definido (false northing).</td>
       </tr>
     </tbody>
   </table>
 </div>
+
+<script>
+  const canvas = document.getElementById('particle-canvas');
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  
+  function resizeCanvas() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  class Particle {
+    constructor() {
+      this.init();
+    }
+    init() {
+      this.x = Math.random() * width;
+      this.y = Math.random() * height;
+      this.speedY = 1 + Math.random() * 2;
+      this.size = 2 + Math.random() * 2;
+      this.color = Math.random() < 0.5 ? 'rgba(0,255,127,0.7)' : 'rgba(0,191,255,0.7)';
+    }
+    update() {
+      this.y += this.speedY;
+      if(this.y > height) this.init();
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.ellipse(this.x, this.y, this.size*0.3, this.size, 0, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+    }
+  }
+
+  const particles = [];
+  const particleCount = 150;
+
+  for(let i = 0; i < particleCount; i++) {
+    particles.push(new Particle());
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+    for(let p of particles){
+      p.update();
+      p.draw();
+    }
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+</script>
 
 </body>
 </html>
