@@ -35,11 +35,32 @@
     .boton-empezar:hover {
       background-color: rgba(0, 100, 210, 0.9);
     }
+    /* Nuevo estilo para el botón de conceptos básicos */
+    .boton-conceptos {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #28a745; /* verde bootstrap */
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: background 0.2s;
+      z-index: 1000; /* para que esté encima */
+    }
+    .boton-conceptos:hover {
+      background-color: #218838; /* verde más oscuro */
+    }
   </style>
 </head>
 <body>
   <div class="boton-contenedor">
     <button class="boton-empezar" onclick="window.location.href='opciones.html'">EMPEZAR</button>
   </div>
+  
+  <button class="boton-conceptos" onclick="window.location.href='conceptos_basicos.html'">CONCEPTOS BÁSICOS</button>
 </body>
 </html>
