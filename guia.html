@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Buscar lugar: obtener coordenadas geográficas y UTM</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map {
+      padding: 0; margin: 0; height: 100%; width: 100%;
+      font-family: sans-serif;
+    }
+    #map {
+      position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+      z-index: 0;
+    }
+    #searchPanel {
+      position: absolute;
+      top: 20px; right: 20px;
+      background: rgba(255,255,255,0.9);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      width: 300px;
+      z-index: 1000;
+    }
+    #searchPanel label {
+      font-weight: bold;
+      margin-top: 8px;
+      display: block;
+    }
+    #searchPanel input {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    #searchPanel button {
+      margin-top: 12px;
+      width: 100%;
+      padding: 8px;
+      font-weight: bold;
+      font-size: 1.05rem;
+      background-color: #41b883;
+      border: none;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+    }
+    #searchPanel button:hover {
+      background-color: #2f8f60;
+    }
+    #resultPanel {
+      position: absolute;
+      bottom: 20px; right: 20px;
+      background: rgba(255,255,255,0.9);
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      width: 300px;
+      font-size: 0.95rem;
+      color: #333;
+      z-index: 1000;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    #volverBtn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      background-color: #41b883;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 10px 18px;
+      font-size: 1.07rem;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 1100;
+      transition: background 0.2s;
+    }
+    #volverBtn:hover {
+      background-color: #28a745;
+    }
+  </style>
+</head>
+<body>
+
+<button id="volverBtn">VOLVER</button>
+
+<div id="map"></div>
+
+<div id="searchPanel">
+  <label for="countryInput">País:</label>
+  <input type="text" id="countryInput" placeholder="Ej. México" />
+  <label for="cityInput">Ciudad:</label>
+  <input type="text" id="cityInput" placeholder="Ej. Ciudad de México" />
+  <button id="searchBtn">Buscar coordenadas</button>
+</div>
+
+<div id="resultPanel" style="display:none;"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
+
+<script>
+  // Inicializar mapa Leaflet
+  const map = L.map('map').setView([20, -100], 4);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 18,
+  }).addTo(map);
+
+  let marker = null;
+
+  // Función para convertir geográficas a UTM
+  function geogToUTM(lat, lon) {
+    const utmZone = Math.floor((lon + 180) / 6) + 1;
+    const hemisphere = lat >= 0 ? 'north' : 'south';
+    const proj4UTM = `+proj=utm +zone=${utmZone} +${hemisphere} +ellps=WGS84 +units=m +no_defs`;
+    const proj4WGS84 = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs';
+    const [x, y] = proj4(proj4WGS84, proj4UTM, [lon, lat]);
+    return { x, y, zone: utmZone, hemisphere };
+  }
+
+  // Función para llamar a API de geocodificación Nominatim (OpenStreetMap, sin necesidad de clave)
+  async function geocode(place) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(place)}&limit=1&addressdetails=1&accept-language=es`;
+    const response = await fetch(url, { headers: { 'User-Agent': 'MyAppGeocode/1.0' } });
+    if (!response.ok) throw new Error('Error en la petición de geocodificación');
+    const data = await response.json();
+    if (data.length === 0) return null;
+    return {
+      lat: parseFloat(data[0].lat),
+      lon: parseFloat(data[0].lon),
+      display_name: data[0].display_name
+    };
+  }
+
+  // Mostrar resultados en el panel y en mapa
+  function showResult(lat, lon, display_name) {
+    const utm = geogToUTM(lat, lon);
+    const resultPanel = document.getElementById('resultPanel');
+    resultPanel.style.display = 'block';
+    resultPanel.innerHTML = `
+      <b>Lugar encontrado:</b> ${display_name}<br/>
+      <b>Coordenadas Geográficas:</b><br/>
+      &nbsp;&nbsp;Latitud: ${lat.toFixed(6)}°<br/>
+      &nbsp;&nbsp;Longitud: ${lon.toFixed(6)}°<br/>
+      <b>Coordenadas UTM:</b><br/>
+      &nbsp;&nbsp;Zona: ${utm.zone} ${utm.hemisphere.toUpperCase()}<br/>
+      &nbsp;&nbsp;X (E): ${utm.x.toFixed(2)} m<br/>
+      &nbsp;&nbsp;Y (N): ${utm.y.toFixed(2)} m
+    `;
+
+    if (marker) {
+      marker.setLatLng([lat, lon]);
+    } else {
+      marker = L.marker([lat, lon]).addTo(map);
+    }
+    map.setView([lat, lon], 14);
+  }
+
+  // Evento botón buscar
+  document.getElementById('searchBtn').addEventListener('click', async () => {
+    const country = document.getElementById('countryInput').value.trim();
+    const city = document.getElementById('cityInput').value.trim();
+    if (!country || !city) {
+      alert('Por favor, ingresa país y ciudad para buscar.');
+      return;
+    }
+    const placeToSearch = `${city}, ${country}`;
+    try {
+      document.getElementById('resultPanel').style.display = 'block';
+      document.getElementById('resultPanel').innerText = 'Buscando...';
+      const result = await geocode(placeToSearch);
+      if (!result) {
+        document.getElementById('resultPanel').innerText = 'No se encontraron coordenadas para ese lugar.';
+        if (marker) {
+          map.removeLayer(marker);
+          marker = null;
+        }
+        return;
+      }
+      showResult(result.lat, result.lon, result.display_name);
+    } catch(err) {
+      alert('Error al buscar el lugar: ' + err.message);
+    }
+  });
+
+  // Botón VOLVER: redirigir a opciones.html
+  document.getElementById('volverBtn').addEventListener('click', () => {
+    window.location.href = 'opciones.html';
+  });
+</script>
+
+</body>
+</html>
