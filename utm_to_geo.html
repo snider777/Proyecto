@@ -47,12 +47,12 @@
     text-shadow: 0 0 2px white;
   }
 
-  /* Estilos del botón VOLVER */
+  /* Botón VOLVER */
   #volverBtn {
     position: absolute;
     top: 20px;
     right: 20px;
-    background-color: #41b883; /* Color verde */
+    background-color: #41b883; /* Verde */
     color: #fff;
     border: none;
     border-radius: 5px;
@@ -60,17 +60,38 @@
     font-size: 1.07rem;
     font-weight: bold;
     cursor: pointer;
-    z-index: 1100; /* Asegura que esté sobre otros elementos */
+    z-index: 1100;
     transition: background 0.2s;
   }
   #volverBtn:hover {
-    background-color: #28a745; /* Verde más oscuro al pasar el ratón */
+    background-color: #28a745;
+  }
+
+  /* Botón GUÍA */
+  #guiaBtn {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background-color: #dc3545; /* Rojo */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 18px;
+    font-size: 1.07rem;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 1100;
+    transition: background 0.2s;
+  }
+  #guiaBtn:hover {
+    background-color: #b02a37;
   }
 </style>
 </head>
 <body>
 
 <button id="volverBtn">VOLVER</button>
+<button id="guiaBtn">GUÍA</button>
 
 <div id="map"></div>
 
@@ -144,7 +165,6 @@
   function drawUTMGrid(zone, hemi) {
     utmGridGroup.clearLayers();
 
-    // Proyección UTM para la zona con Proj4
     const south = (hemi === 'S') ? '+south' : '';
     const projUTM = `+proj=utm +zone=${zone} ${south} +ellps=WGS84 +units=m +no_defs`;
     const projWGS84 = '+proj=longlat +datum=WGS84 +no_defs';
@@ -152,10 +172,8 @@
     const spacing = 10000; // 10 km
     const numLines = 20; // 20 líneas cada dirección
 
-    // Centro easting típico 500000 m
     const centerEasting = 500000;
 
-    // Líneas verticales (Easting)
     for(let i = -numLines; i <= numLines; i++){
       let latlngs = [];
       for(let j = 0; j <= numLines * 2; j++){
@@ -167,7 +185,6 @@
       L.polyline(latlngs, {color:'#666', weight:1, opacity:0.5}).addTo(utmGridGroup);
     }
 
-    // Líneas horizontales (Northing)
     for(let j = 0; j <= numLines * 2; j++){
       let latlngs = [];
       for(let i = -numLines; i <= numLines; i++){
@@ -192,7 +209,6 @@
       return;
     }
 
-    // Conversión UTM a LatLon
     const south = (hemi === 'S') ? '+south' : '';
     const utmProj = `+proj=utm +zone=${zone} ${south} +ellps=WGS84 +units=m +no_defs`;
     const wgs84Proj = '+proj=longlat +datum=WGS84 +no_defs';
@@ -215,7 +231,6 @@
     }
     map.setView([lat, lon], 14);
 
-    // Dibuja grilla UTM y sombreado zona aproximada en lat/lon
     drawUTMGrid(zone, hemi);
 
     if(zonePolygon){
@@ -225,10 +240,34 @@
     zonePolygon.addTo(map);
   });
 
-  // Funcionalidad para el botón VOLVER
+  // Funcionalidad del botón VOLVER
   document.getElementById('volverBtn').addEventListener('click', () => {
     window.location.href = 'opciones.html'; // Redirige a opciones.html
   });
+
+  // Botón GUÍA
+  const guiaBtn = document.createElement('button');
+  guiaBtn.id = 'guiaBtn';
+  guiaBtn.textContent = 'GUÍA';
+  guiaBtn.style.position = 'absolute';
+  guiaBtn.style.bottom = '20px';
+  guiaBtn.style.left = '20px';
+  guiaBtn.style.backgroundColor = '#dc3545'; // rojo
+  guiaBtn.style.color = 'white';
+  guiaBtn.style.border = 'none';
+  guiaBtn.style.borderRadius = '5px';
+  guiaBtn.style.padding = '10px 18px';
+  guiaBtn.style.fontSize = '1.07rem';
+  guiaBtn.style.fontWeight = 'bold';
+  guiaBtn.style.cursor = 'pointer';
+  guiaBtn.style.zIndex = '1100';
+  guiaBtn.style.transition = 'background 0.2s';
+  guiaBtn.onmouseover = () => guiaBtn.style.backgroundColor = '#b02a37';
+  guiaBtn.onmouseout = () => guiaBtn.style.backgroundColor = '#dc3545';
+  guiaBtn.addEventListener('click', () => {
+    window.location.href = 'guia.html';
+  });
+  document.body.appendChild(guiaBtn);
 </script>
 
 </body>
