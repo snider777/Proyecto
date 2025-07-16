@@ -5,41 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Conceptos Geográficos</title>
 <style>
-  /* fondo y reset */
   html, body {
-    margin: 0; 
+    margin: 0;
     height: 100%;
-    overflow: hidden;
     font-family: Arial, sans-serif;
-  }
-  body {
     background: url('fondo.jpg') no-repeat center center fixed;
     background-size: cover;
-    position: relative;
     color: #000;
   }
 
-  /* canvas para partículas sobre el fondo */
-  #particle-canvas {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none; /* para que no interfiera con la interacción */
-    z-index: 0;
-  }
-
-  /* contenedor tabla centrado */
   .tabla-contenedor {
-    position: relative;
-    z-index: 1; /* encima del canvas */
-    max-width: 600px;
+    max-width: 700px;
     margin: 40px auto;
-    background: rgba(144, 238, 144, 0.7); /* verde claro translúcido */
-    border-collapse: collapse;
+    background: rgba(144, 238, 144, 0.7); /* verde claro con transparencia */
+    padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    padding: 20px;
   }
 
   table {
@@ -49,7 +30,7 @@
   }
 
   th, td {
-    border: 1px solid black;  /* líneas negras */
+    border: 1px solid black; /* líneas negras */
     padding: 10px 12px;
     text-align: left;
   }
@@ -67,8 +48,6 @@
 </head>
 <body>
 
-<canvas id="particle-canvas"></canvas>
-
 <div class="tabla-contenedor">
   <table>
     <thead>
@@ -78,78 +57,41 @@
       </tr>
     </thead>
     <tbody>
-      <tr><td>1. Longitud</td><td>Coordenada geográfica que indica la distancia angular de un punto al este o al oeste del meridiano de Greenwich.</td></tr>
-      <tr><td>2. Latitud</td><td>Coordenada geográfica que indica la distancia angular de un punto al norte o al sur del ecuador terrestre.</td></tr>
-      <tr><td>3. Altitud</td><td>Altura o distancia vertical de un punto con respecto al nivel del mar.</td></tr>
-      <tr><td>4. Meridiano</td><td>Línea imaginaria que une los polos norte y sur de la Tierra y que sirve para medir la longitud.</td></tr>
-      <tr><td>5. Paralelo</td><td>Línea imaginaria paralela al ecuador que sirve para medir la latitud.</td></tr>
-      <tr><td>6. Coordenadas Geográficas</td><td>Sistema numérico que permite definir la posición exacta de un punto sobre la superficie terrestre mediante latitud y longitud.</td></tr>
+      <tr>
+        <td>1. Longitud</td>
+        <td>Coordenada geográfica que indica la distancia angular de un punto al este o al oeste del meridiano de Greenwich.</td>
+      </tr>
+      <tr>
+        <td>2. Latitud</td>
+        <td>Coordenada geográfica que indica la distancia angular de un punto al norte o al sur del ecuador terrestre.</td>
+      </tr>
+      <tr>
+        <td>3. Altitud</td>
+        <td>Altura o distancia vertical de un punto con respecto al nivel del mar.</td>
+      </tr>
+      <tr>
+        <td>4. Meridiano</td>
+        <td>Línea imaginaria que une los polos norte y sur y sirve para medir la longitud.</td>
+      </tr>
+      <tr>
+        <td>5. Paralelo</td>
+        <td>Línea imaginaria paralela al ecuador que sirve para medir la latitud.</td>
+      </tr>
+      <tr>
+        <td>6. Coordenadas Geográficas</td>
+        <td>Sistema numérico que permite definir la posición exacta de un punto sobre la superficie terrestre mediante latitud y longitud.</td>
+      </tr>
+      <tr>
+        <td>7. Easting</td>
+        <td>Distancia hacia el este en un sistema de coordenadas proyectadas (como UTM), representando la posición en metros a partir de un origen fijado (false easting).</td>
+      </tr>
+      <tr>
+        <td>8. Northing</td>
+        <td>Distancia hacia el norte en un sistema de coordenadas proyectadas (como UTM), representando la posición en metros a partir de un origen fijado (false northing).</td>
+      </tr>
     </tbody>
   </table>
 </div>
-
-<script>
-  const canvas = document.getElementById('particle-canvas');
-  const ctx = canvas.getContext('2d');
-  let width, height;
-  let particles = [];
-
-  // Ajustar tamaño del canvas al tamaño de la ventana
-  function resize() {
-    width = window.innerWidth;
-    height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
-  }
-  window.addEventListener('resize', resize);
-  resize();
-
-  // Partícula con propiedades para la lluvia verde/celeste
-  class Particle {
-    constructor() {
-      this.x = Math.random() * width;
-      this.y = Math.random() * height;
-      this.speedY = 1 + Math.random() * 2; // velocidad vertical
-      this.size = 2 + Math.random() * 2;
-      this.color = Math.random() < 0.5 ? 'rgba(0,255,127,0.7)' : 'rgba(0,191,255,0.7)'; // verde spring o celeste
-    }
-    update() {
-      this.y += this.speedY;
-      if(this.y > height) {
-        this.x = Math.random() * width;
-        this.y = 0;
-        this.speedY = 1 + Math.random() * 2;
-        this.size = 2 + Math.random() * 2;
-        this.color = Math.random() < 0.5 ? 'rgba(0,255,127,0.7)' : 'rgba(0,191,255,0.7)';
-      }
-    }
-    draw() {
-      ctx.beginPath();
-      // podemos dibujar circulitos o líneas simulando gotas pequeñas
-      ctx.fillStyle = this.color;
-      ctx.ellipse(this.x, this.y, this.size*0.3, this.size, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  // Crear partículas
-  const particleCount = 150;
-  for(let i = 0; i < particleCount; i++) {
-    particles.push(new Particle());
-  }
-
-  // Función de animación
-  function animate() {
-    ctx.clearRect(0, 0, width, height);
-    particles.forEach(p => {
-      p.update();
-      p.draw();
-    });
-    requestAnimationFrame(animate);
-  }
-
-  animate();
-</script>
 
 </body>
 </html>
