@@ -46,9 +46,31 @@
     user-select: none;
     text-shadow: 0 0 2px white;
   }
+
+  /* Estilos del botón VOLVER */
+  #volverBtn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background-color: #41b883; /* Color verde */
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 18px;
+    font-size: 1.07rem;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 1100; /* Asegura que esté sobre otros elementos */
+    transition: background 0.2s;
+  }
+  #volverBtn:hover {
+    background-color: #28a745; /* Verde más oscuro al pasar el ratón */
+  }
 </style>
 </head>
 <body>
+
+<button id="volverBtn">VOLVER</button>
 
 <div id="map"></div>
 
@@ -201,6 +223,11 @@
     }
     zonePolygon = createZonePolygon(zone, hemi);
     zonePolygon.addTo(map);
+  });
+
+  // Funcionalidad para el botón VOLVER
+  document.getElementById('volverBtn').addEventListener('click', () => {
+    window.location.href = 'opciones.html'; // Redirige a opciones.html
   });
 </script>
 
