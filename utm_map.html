@@ -43,12 +43,75 @@
       font-size: 0.9rem;
       color: #333;
     }
+    /* Botón "VOLVER" */
+    #volverBtn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: #41b883;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 10px 18px;
+      font-size: 1.07rem;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 1100;
+      transition: background 0.2s;
+    }
+    #volverBtn:hover {
+      background-color: #28a745;
+    }
+
+    /* Panel de opciones (pantalla inicial) */
+    #opcionesPanel {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255,255,255,0.96);
+      padding: 32px 32px 24px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.21);
+      min-width: 340px;
+      font-family: sans-serif;
+      z-index: 1200;
+      display: none;
+    }
+    #opcionesPanel h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+    .opcionBtn {
+      display: block;
+      width: 100%;
+      margin-bottom: 15px;
+      padding: 12px;
+      background: #41b883;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 1.08rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 12px;
+      transition: background .15s;
+    }
+    .opcionBtn:hover {
+      background: #28a745;
+    }
   </style>
 </head>
 <body>
+  <button id="volverBtn" style="display: none;">VOLVER</button>
   <div id="map"></div>
 
-  <div id="inputPanel">
+  <div id="opcionesPanel">
+    <h2>¿Qué desea hacer?</h2>
+    <button class="opcionBtn" id="geoToUtmBtn">PASAR DE COORDENADAS GEOGRÁFICAS A UTM</button>
+    <button class="opcionBtn" id="utmToGeoBtn">PASAR DE COORDENADAS UTM A GEOGRÁFICAS</button>
+  </div>
+
+  <div id="inputPanel" style="display: none;">
     <label for="latInput">LATITUD (grados decimales):</label>
     <input type="number" id="latInput" step="any" placeholder="ej. 19.4326" />
 
@@ -89,6 +152,46 @@
 
     let marker;
 
+    // Pantallas/Paneles
+    const inputPanel = document.getElementById('inputPanel');
+    const opcionesPanel = document.getElementById('opcionesPanel');
+    const volverBtn = document.getElementById('volverBtn');
+
+    // Mostrar opciones al iniciar
+    window.onload = function() {
+      opcionesPanel.style.display = 'block';
+      inputPanel.style.display = 'none';
+      volverBtn.style.display = 'none';
+    };
+
+    // Acciones botón "VOLVER"
+    volverBtn.onclick = function() {
+      inputPanel.style.display = 'none';
+      opcionesPanel.style.display = 'block';
+      volverBtn.style.display = 'none';
+      if (marker) { map.removeLayer(marker); marker=null;}
+      map.setView([19.4326, -99.1332], 6);
+      document.getElementById('result').innerHTML = '';
+      // Limpiar campos
+      document.getElementById('latInput').value = '';
+      document.getElementById('lonInput').value = '';
+      document.getElementById('elipsoideSelect').value = 'estandar';
+      document.getElementById('manualEllipsoidInputs').style.display = 'none';
+    };
+
+    // Opciones principales
+    document.getElementById('geoToUtmBtn').onclick = function() {
+      opcionesPanel.style.display = 'none';
+      inputPanel.style.display = 'block';
+      volverBtn.style.display = 'block';
+    };
+
+    document.getElementById('utmToGeoBtn').onclick = function() {
+      // Puedes implementar un formulario diferente aquí
+      alert('Función pendiente de implementar: Pasar de UTM a Geográficas');
+      // Para una implementación completa, agrega un segundo formulario y lógica
+    };
+
     // Mostrar u ocultar inputs de elipsoide manual
     const elipsoideSelect = document.getElementById('elipsoideSelect');
     const manualBox = document.getElementById('manualEllipsoidInputs');
@@ -105,17 +208,12 @@
 
     // Convertir geográficas a UTM usando proj4
     function geogToUTM(lat, lon) {
-      // Defino WGS84 EPSG:4326 y el sistema UTM basado en el huso calculado
-      // Leaflet usa lng/lat para geojson y proj4 usa lon/lat en orden (longitud primero)
       const utmZone = Math.floor((lon + 180) / 6) + 1;
       const hemisphere = lat >= 0 ? 'north' : 'south';
-
       // Definición proj4 para UTM zona calculada, WGS84 elipsoide
       const proj4UTM = `+proj=utm +zone=${utmZone} +${hemisphere} +ellps=WGS84 +units=m +no_defs`;
-
       // Proyección geográfica WGS84
       const proj4WGS84 = '+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs';
-
       // Transformo coordenadas:
       const [x, y] = proj4(proj4WGS84, proj4UTM, [lon, lat]);
       return { x, y, zone: utmZone, hemisphere };
@@ -129,14 +227,7 @@
         alert('Por favor, ingresa valores válidos para latitud y longitud.');
         return;
       }
-
-      // Por simplicidad aquí usamos solo WGS84 estándar
-      // El parámetro manual no será usado para cambiar el elipsoide porque 
-      // proj4js no soporta cambio dinámico sencillo sin definir una proyección con parámetros completos
-      // Si deseas, puedes ampliar la lógica para crear nuevas definiciones PROJ4
-
       const utm = geogToUTM(lat, lon);
-
       // Mostrar resultado en pantalla
       const resultDiv = document.getElementById('result');
       resultDiv.innerHTML = `
@@ -145,8 +236,7 @@
         X (E): ${utm.x.toFixed(2)} m<br/>
         Y (N): ${utm.y.toFixed(2)} m
       `;
-
-      // Mostrar punto en mapa (convertimos UTM de vuelta a lat/lon para Leaflet)
+      // Mostrar punto en mapa 
       if (marker) map.removeLayer(marker);
       marker = L.marker([lat, lon]).addTo(map);
       map.setView([lat, lon], 14);
