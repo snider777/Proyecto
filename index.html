@@ -13,6 +13,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative; /* para botón absoluto */
+      font-family: Arial, sans-serif;
     }
     .boton-contenedor {
       height: 100vh;
@@ -35,12 +37,12 @@
     .boton-empezar:hover {
       background-color: rgba(0, 100, 210, 0.9);
     }
-    /* Nuevo estilo para el botón de conceptos básicos */
+    /* Botón conceptos básicos superior derecho */
     .boton-conceptos {
       position: fixed;
       top: 20px;
       right: 20px;
-      background-color: #00ff6a; /* verde bootstrap */
+      background-color: #00ff6a; /* verde brillante */
       color: white;
       border: none;
       border-radius: 10px;
@@ -49,10 +51,29 @@
       cursor: pointer;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       transition: background 0.2s;
-      z-index: 1000; /* para que esté encima */
+      z-index: 1000;
     }
     .boton-conceptos:hover {
-      background-color: #b5ff70; /* verde más oscuro */
+      background-color: #b5ff70; /* verde claro */
+    }
+    /* Botón tutorial inferior derecho */
+    .boton-tutorial {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #c3d600; /* amarillo verdoso */
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: background 0.2s;
+      z-index: 1000;
+    }
+    .boton-tutorial:hover {
+      background-color: #b0c000; /* un tono más oscuro */
     }
   </style>
 </head>
@@ -62,5 +83,7 @@
   </div>
   
   <button class="boton-conceptos" onclick="window.location.href='tuto.html'">CONCEPTOS BÁSICOS</button>
+  
+  <button class="boton-tutorial" onclick="window.location.href='pasos.html'">TUTORIAL</button>
 </body>
 </html>
