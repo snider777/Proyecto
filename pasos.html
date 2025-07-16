@@ -1,1 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tutorial de Conversión Geográfica</title>
+  <style>
+    /* Contenedor principal con imagen de fondo y overlay para mejorar contraste */
+    body, html {
+      margin: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      color: white;
+      background: url('pasosfondo.jpg') no-repeat center center fixed;
+      background-size: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .overlay {
+      background: rgba(0, 0, 0, 0.5); /* oscuro semitransparente para mejorar lectura */
+      border-radius: 15px;
+      max-width: 800px;
+      width: 100%;
+      padding: 30px;
+      box-sizing: border-box;
+      box-shadow: 0 0 15px rgba(0,0,0,0.7);
+    }
+    h2 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 1.8rem;
+      border-bottom: 2px solid #7cffb9;
+      padding-bottom: 5px;
+    }
+    p {
+      font-size: 1.1rem;
+      line-height: 1.5;
+      margin-top: 0;
+      margin-bottom: 30px;
+      color: #d0f0dc;
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <h2>1. PARA CONVERTIR DE GEOGRÁFICAS A UTM:</h2>
+    <p>
+      En esta conversión se transforma una coordenada expresada en grados de latitud y longitud a coordenadas UTM (Universal Transverse Mercator), que se expresan en metros. Para realizar esta conversión, se le solicitará al usuario que ingrese la latitud y longitud del punto geográfico, indicando el hemisferio y zona UTM correspondientes para obtener las coordenadas proyectadas precisas.
+    </p>
 
+    <h2>2. PARA CONVERTIR DE UTM A GEOGRÁFICAS:</h2>
+    <p>
+      Este proceso permite transformar las coordenadas UTM (en metros) de vuelta a coordenadas geográficas en grados de latitud y longitud. El usuario deberá facilitar las coordenadas Easting, Northing, la zona UTM y el hemisferio en el que se encuentra el punto para que el sistema realice la conversión correcta a valores geográficos tradicionales.
+    </p>
+  </div>
+</body>
+</html>
